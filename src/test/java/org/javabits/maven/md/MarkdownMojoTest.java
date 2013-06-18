@@ -19,11 +19,11 @@ public class MarkdownMojoTest {
 
     @Test
     public void testGetDestinationFilePathSimple() throws Exception {
-        assertThat(getDestinationFilePath("user-guide.md"), is("user-guide.html"));
+        assertThat(getDestinationFilePath("user-guide.md", "html"), is("user-guide.html"));
     }
 
     @Test
     public void testGetDestinationFilePathChildPath() throws Exception {
-        assertThat(getDestinationFilePath("user-guide/user-guide.md"), is("user-guide" + File.separatorChar + "user-guide.html"));
+        assertThat(getDestinationFilePath("user-guide/user-guide.md", "mkd"), is("user-guide" + File.separatorChar + "user-guide.mkd"));
     }
 }

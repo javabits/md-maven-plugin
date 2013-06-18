@@ -20,6 +20,8 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
 
+import static com.google.common.io.Files.getFileExtension;
+
 /**
  * This plugin is responsible to generate Html files from Markdown input files.
  * The output file is the result of the merge of a template http file and the
@@ -33,7 +35,7 @@ import java.util.Arrays;
 public class MarkdownMojo extends AbstractMojo {
 
     private static final String DEFAULT_FILE_EXTENSION = "md";
-    private static final String FILE_FILTER = "**/*." + DEFAULT_FILE_EXTENSION;
+    private static final String FILE_FILTER = "**/*";
     private static final String[] DEFAULT_INCLUDES = new String[]{FILE_FILTER};
     private static final String DEFAULT_CHARSET = "UTF-8";
     private static final String DEFAULT_OUTPUT_DIRECTORY = "${project.build.directory}/site";
@@ -72,6 +74,9 @@ public class MarkdownMojo extends AbstractMojo {
     @Parameter
     private String[] options;
 
+    @Parameter(property = "md.file.extension", defaultValue = DEFAULT_FILE_EXTENSION)
+    private String fileExtension;
+
     @Override
     public void execute() throws MojoExecutionException, MojoFailureException {
         getLog().info("Markdown");
@@ -87,31 +92,40 @@ public class MarkdownMojo extends AbstractMojo {
 
         for (String includedFile : includedFiles) {
             try {
-                Charset charset = Charset.forName(this.charset);
-                String file = Files.toString(getInputFile(includedFile), charset);
-                getLog().debug("Transform file: " + includedFile);
-                String html = pegDownProcessor.markdownToHtml(file);
-                File destinationFile = getDestinationFile(includedFile);
-                File parentFile = destinationFile.getParentFile();
-//                if (!parentFile.exists()) {
-                    if(parentFile.mkdirs()) {
-                        Files.copy(new InputSupplier<InputStream>() {
-                            @Override
-                            public InputStream getInput() throws IOException {
-                                return getClass().getResourceAsStream("/base.css");
-                            }
-                        }, new File(parentFile, "base.css"));
-                    }
-//                }
-                String title = Markdowns.getTitle(file);
-                getLog().debug("Document title: " + title);
-                String templateFileWithTile = templateFile.replace("${title}", title);
-                html = templateFileWithTile.replace("${content}", html);
+                if (fileExtension.equals(getFileExtension(includedFile))) {
+                    Charset charset = Charset.forName(this.charset);
+                    String file = Files.toString(getInputFile(includedFile), charset);
+                    getLog().debug("Transform file: " + includedFile);
+                    String html = pegDownProcessor.markdownToHtml(file);
+                    File destinationFile = getDestinationFileForTransformation(includedFile);
+                    prepareDestination(destinationFile);
+                    String title = Markdowns.getTitle(file);
+                    getLog().debug("Document title: " + title);
+                    String templateFileWithTile = templateFile.replace("${title}", title);
+                    html = templateFileWithTile.replace("${content}", html);
 
-                Files.write(html, destinationFile, charset);
+                    Files.write(html, destinationFile, charset);
+                } else {
+                    //just copy static resource.
+                    File destinationFileForCopy = getDestinationFileForCopy(includedFile);
+                    prepareDestination(destinationFileForCopy);
+                    Files.copy(getInputFile(includedFile), destinationFileForCopy);
+                }
             } catch (IOException e) {
                 throw new MojoExecutionException("IO exception when generated from: " + includedFile, e);
             }
+        }
+    }
+
+    private void prepareDestination(File destinationFile) throws IOException {
+        File parentFile = destinationFile.getParentFile();
+        if (parentFile.mkdirs()) {
+            Files.copy(new InputSupplier<InputStream>() {
+                @Override
+                public InputStream getInput() throws IOException {
+                    return getClass().getResourceAsStream("/base.css");
+                }
+            }, new File(parentFile, "base.css"));
         }
     }
 
@@ -129,16 +143,28 @@ public class MarkdownMojo extends AbstractMojo {
         return new File(sources, includedFile);
     }
 
-    private File getDestinationFile(String includedFile) {
-        String nameWithoutExtension = getDestinationFilePath(includedFile);
+    private File getDestinationFile(String includedFile, String extension) {
+        String nameWithoutExtension = getDestinationFilePath(includedFile, extension);
         return new File(outputDir, nameWithoutExtension);
     }
+    private File getDestinationFileForTransformation(String includedFile) {
+        return getDestinationFile(includedFile, "html");
+    }
+
+    private File getDestinationFileForCopy(String includedFile) {
+        return getDestinationFile(includedFile, getFileExtension(includedFile));
+    }
+
 
     static String getDestinationFilePath(String includedFile) {
+        return getDestinationFilePath(includedFile, "html");
+    }
+
+    static String getDestinationFilePath(String includedFile, String extension) {
         Path path = Paths.get(includedFile);
-        String fileName = Files.getNameWithoutExtension(includedFile) + ".html";
+        String fileName = Files.getNameWithoutExtension(includedFile) + '.' + extension;
         Path parent = path.getParent();
-        if (parent !=  null) {
+        if (parent != null) {
             return parent.resolve(fileName).toString();
         }
         return fileName;

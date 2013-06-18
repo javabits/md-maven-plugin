@@ -5,4 +5,6 @@ private void checkFile(String path) {
 
 checkFile("target/site/index.html");
 checkFile("target/site/table-content.html");
+checkFile("target/site/icon.gif");
 checkFile("target/site/user-guide/user-guide.html");
+checkFile("target/site/user-guide/image.png");
