@@ -2,7 +2,6 @@ package org.javabits.maven.md;
 
 import com.google.common.io.Files;
 import com.google.common.io.InputSupplier;
-import com.google.common.io.Resources;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
@@ -12,11 +11,14 @@ import org.codehaus.plexus.util.DirectoryScanner;
 import org.pegdown.Extensions;
 import org.pegdown.PegDownProcessor;
 
-import java.io.*;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
 import java.lang.reflect.Field;
 import java.nio.charset.Charset;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Arrays;
-import java.util.List;
 
 /**
  * This plugin is responsible to generate Html files from Markdown input files.
@@ -24,6 +26,7 @@ import java.util.List;
  * output of the parsing of the input file. You may want to change the html template file.
  * Or you may simply change the css used in the original template.
  * TODO provide a way to change the template or the css.
+ *
  * @author Romain Gilles
  */
 @Mojo(name = "generate")
@@ -80,32 +83,31 @@ public class MarkdownMojo extends AbstractMojo {
         markDownScanner.scan();
         String[] includedFiles = markDownScanner.getIncludedFiles();
         getLog().debug("Included files: " + Arrays.toString(includedFiles));
-        String templateFile = null;
-        try {
-            templateFile = Resources.toString(getClass().getResource("/file-template.html"), Charset.forName("UTF-8"));
-        } catch (IOException e) {
-            throw new MojoExecutionException("Cannot read the template-file", e);
-        }
+        final String templateFile = getTemplate();
 
         for (String includedFile : includedFiles) {
             try {
                 Charset charset = Charset.forName(this.charset);
                 String file = Files.toString(getInputFile(includedFile), charset);
-                getLog().debug("Transform file: " + file);
+                getLog().debug("Transform file: " + includedFile);
                 String html = pegDownProcessor.markdownToHtml(file);
                 File destinationFile = getDestinationFile(includedFile);
-                getLog().debug("To file: " + file);
                 File parentFile = destinationFile.getParentFile();
-                if (!parentFile.exists()) {
-                    parentFile.mkdirs();
-                    Files.copy(new InputSupplier<InputStream>() {
-                        @Override
-                        public InputStream getInput() throws IOException {
-                            return getClass().getResourceAsStream("/base.css");
-                        }
-                    }, new File(parentFile, "base.css"));
-                }
-                html = templateFile.replace("${content}", html);
+//                if (!parentFile.exists()) {
+                    if(parentFile.mkdirs()) {
+                        Files.copy(new InputSupplier<InputStream>() {
+                            @Override
+                            public InputStream getInput() throws IOException {
+                                return getClass().getResourceAsStream("/base.css");
+                            }
+                        }, new File(parentFile, "base.css"));
+                    }
+//                }
+                String title = Markdowns.getTitle(file);
+                getLog().debug("Document title: " + title);
+                String templateFileWithTile = templateFile.replace("${title}", title);
+                html = templateFileWithTile.replace("${content}", html);
+
                 Files.write(html, destinationFile, charset);
             } catch (IOException e) {
                 throw new MojoExecutionException("IO exception when generated from: " + includedFile, e);
@@ -113,13 +115,33 @@ public class MarkdownMojo extends AbstractMojo {
         }
     }
 
+    private String getTemplate() throws MojoExecutionException {
+        String templateFile;
+        try {
+            templateFile = Resources.toString("/file-template.html");
+        } catch (IOException e) {
+            throw new MojoExecutionException("Cannot read the template-file", e);
+        }
+        return templateFile;
+    }
+
     private File getInputFile(String includedFile) {
         return new File(sources, includedFile);
     }
 
     private File getDestinationFile(String includedFile) {
-        String nameWithoutExtension = Files.getNameWithoutExtension(includedFile) + ".html";
+        String nameWithoutExtension = getDestinationFilePath(includedFile);
         return new File(outputDir, nameWithoutExtension);
+    }
+
+    static String getDestinationFilePath(String includedFile) {
+        Path path = Paths.get(includedFile);
+        String fileName = Files.getNameWithoutExtension(includedFile) + ".html";
+        Path parent = path.getParent();
+        if (parent !=  null) {
+            return parent.resolve(fileName).toString();
+        }
+        return fileName;
     }
 
     private String[] getIncludes() {
@@ -138,7 +160,7 @@ public class MarkdownMojo extends AbstractMojo {
                 getLog().debug("Lookup option value for: " + option);
                 try {
                     Field field = Extensions.class.getField(option);
-                    result |= (int)field.get(extensions);
+                    result |= (int) field.get(extensions);
                 } catch (NoSuchFieldException e) {
                     throw new MojoExecutionException("Cannot find the corresponding extension: " + option, e);
                 } catch (IllegalAccessException e) {

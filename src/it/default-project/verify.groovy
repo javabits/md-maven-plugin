@@ -1,3 +1,8 @@
-File touchFile = new File( basedir, "target/site/index.html" );
+private void checkFile(String path) {
+    File tableOfContent = new File(basedir, path);
+    assert tableOfContent.isFile()
+}
 
-assert touchFile.isFile()
+checkFile("target/site/index.html");
+checkFile("target/site/table-content.html");
+checkFile("target/site/user-guide/user-guide.html");

@@ -13,3 +13,7 @@ Code Block
 ```
 
 Where you can also use a `in line code block` as you can see.
+
+[link to the user guide](user-guide/user-guide.html)
+
+Et voila.
