@@ -3,7 +3,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>org.javabits.maven.md</groupId>
     <artifactId>md-maven-pluging</artifactId>
-    <version>1.0.0.M1</version>
+    <version>1.0-SNAPSHOT</version>
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <java.compliance>1.7</java.compliance>
@@ -108,7 +108,7 @@
         <connection>scm:git:ssh://github.com/javabits/md-maven-plugin.git</connection>
         <developerConnection>scm:git:ssh://git@github.com/javabits/md-maven-plugin.git</developerConnection>
         <url>https://github.com/javabits/md-maven-plugin</url>
-      <tag>md-maven-pluging-1.0.0.M1</tag>
+      <tag>HEAD</tag>
   </scm>
 
     <build>
