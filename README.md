@@ -4,6 +4,9 @@ md-maven-plugin
 Markdown maven plugin integration
 
 
+How to make a milestone release
+--------------------------------
+
 ```cmd
 > mvn release:prepare -DscmCommentPrefix="[maven-release-plugin] #XX: " -B -DreleaseVersion=1.0.0.MX -DdevelopmentVersion=1.0-SNAPSHOT
 [INFO] Scanning for projects...
