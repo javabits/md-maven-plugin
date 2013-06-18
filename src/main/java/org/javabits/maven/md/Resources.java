@@ -1,7 +1,13 @@
 package org.javabits.maven.md;
 
+import com.google.common.io.Files;
+import com.google.common.io.InputSupplier;
+
+import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.charset.Charset;
+import java.nio.file.Paths;
 
 /**
  * TODO comment
@@ -28,4 +34,19 @@ public final class Resources {
         return com.google.common.io.Resources.toString(Resources.class.getResource(path), charset);
     }
 
+    public static File copyToDir(String path, File destinationDirectory) throws IOException {
+        String name = Paths.get(path).getFileName().toString();
+        File toFile = new File(destinationDirectory, name);
+        copy(path, toFile);
+        return toFile;
+    }
+
+    public static void copy(final String path, File toFile) throws IOException {
+        Files.copy(new InputSupplier<InputStream>() {
+            @Override
+            public InputStream getInput() throws IOException {
+                return getClass().getResourceAsStream(path);
+            }
+        }, toFile);
+    }
 }

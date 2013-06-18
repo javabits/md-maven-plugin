@@ -1,7 +1,6 @@
 package org.javabits.maven.md;
 
 import com.google.common.io.Files;
-import com.google.common.io.InputSupplier;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
@@ -13,14 +12,15 @@ import org.pegdown.PegDownProcessor;
 
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
 import java.lang.reflect.Field;
 import java.nio.charset.Charset;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
 
+import static com.google.common.io.Files.createParentDirs;
 import static com.google.common.io.Files.getFileExtension;
+import static org.javabits.maven.md.Resources.copyToDir;
 
 /**
  * This plugin is responsible to generate Html files from Markdown input files.
@@ -74,6 +74,9 @@ public class MarkdownMojo extends AbstractMojo {
     @Parameter
     private String[] options;
 
+    @Parameter(property = "md.css")
+    private File css;
+
     @Parameter(property = "md.file.extension", defaultValue = DEFAULT_FILE_EXTENSION)
     private String fileExtension;
 
@@ -90,6 +93,7 @@ public class MarkdownMojo extends AbstractMojo {
         getLog().debug("Included files: " + Arrays.toString(includedFiles));
         final String templateFile = getTemplate();
 
+        Path targetCss = prepareCss().getAbsoluteFile().toPath();
         for (String includedFile : includedFiles) {
             try {
                 if (fileExtension.equals(getFileExtension(includedFile))) {
@@ -98,17 +102,17 @@ public class MarkdownMojo extends AbstractMojo {
                     getLog().debug("Transform file: " + includedFile);
                     String html = pegDownProcessor.markdownToHtml(file);
                     File destinationFile = getDestinationFileForTransformation(includedFile);
-                    prepareDestination(destinationFile);
+                    createParentDirs(destinationFile);
                     String title = Markdowns.getTitle(file);
                     getLog().debug("Document title: " + title);
-                    String templateFileWithTile = templateFile.replace("${title}", title);
-                    html = templateFileWithTile.replace("${content}", html);
 
+                    String templateFileWithTile = templateFile.replace("${title}", title).replace("${css}", getCssRelativePath(targetCss, destinationFile));
+                    html = templateFileWithTile.replace("${content}", html);
                     Files.write(html, destinationFile, charset);
                 } else {
                     //just copy static resource.
                     File destinationFileForCopy = getDestinationFileForCopy(includedFile);
-                    prepareDestination(destinationFileForCopy);
+                    createParentDirs(destinationFileForCopy);
                     Files.copy(getInputFile(includedFile), destinationFileForCopy);
                 }
             } catch (IOException e) {
@@ -117,15 +121,26 @@ public class MarkdownMojo extends AbstractMojo {
         }
     }
 
-    private void prepareDestination(File destinationFile) throws IOException {
-        File parentFile = destinationFile.getParentFile();
-        if (parentFile.mkdirs()) {
-            Files.copy(new InputSupplier<InputStream>() {
-                @Override
-                public InputStream getInput() throws IOException {
-                    return getClass().getResourceAsStream("/base.css");
-                }
-            }, new File(parentFile, "base.css"));
+    private String getCssRelativePath(Path targetCss, File destinationFile) {
+        return destinationFile.getAbsoluteFile().toPath().getParent().relativize(targetCss).toString().replace("\\", "/");
+    }
+
+    private File prepareCss() throws MojoExecutionException {
+        if (outputDir.mkdirs()) {
+            getLog().debug("Create the root directory: " + outputDir);
+        }
+        File targetCss = null;
+        try {
+            if (css != null) {
+                targetCss = new File(outputDir, css.toPath().getFileName().toString());
+
+                Files.copy(css, targetCss);
+            } else {
+                targetCss = copyToDir("/base.css", outputDir);
+            }
+            return targetCss;
+        } catch (IOException e) {
+            throw new MojoExecutionException("Cannot copy css file: " + targetCss, e);
         }
     }
 
@@ -147,6 +162,7 @@ public class MarkdownMojo extends AbstractMojo {
         String nameWithoutExtension = getDestinationFilePath(includedFile, extension);
         return new File(outputDir, nameWithoutExtension);
     }
+
     private File getDestinationFileForTransformation(String includedFile) {
         return getDestinationFile(includedFile, "html");
     }
