@@ -3,7 +3,7 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <groupId>org.javabits.maven.md</groupId>
-    <artifactId>simple-test</artifactId>
+    <artifactId>options-test</artifactId>
     <version>1.0-SNAPSHOT</version>
     <name>Markdown Simple Test project</name>
     <description>In this project we try to test markdown generation with default properties</description>
@@ -35,6 +35,7 @@
                                <option>FENCED_CODE_BLOCKS</option>
                            </options>
                            <css>${basedir}/src/main/md/toto.css</css>
+                           <addFinalName>true</addFinalName>
                        </configuration>
                     </execution>
                 </executions>

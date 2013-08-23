@@ -4,8 +4,14 @@ import com.google.common.io.Files;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
+import org.apache.maven.plugins.annotations.Component;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
+import org.apache.maven.project.MavenProject;
+import org.apache.maven.project.MavenProjectHelper;
+import org.codehaus.plexus.archiver.zip.ZipArchiver;
+import org.codehaus.plexus.logging.Logger;
+import org.codehaus.plexus.logging.console.ConsoleLogger;
 import org.codehaus.plexus.util.DirectoryScanner;
 import org.pegdown.Extensions;
 import org.pegdown.PegDownProcessor;
@@ -38,7 +44,10 @@ public class MarkdownMojo extends AbstractMojo {
     private static final String FILE_FILTER = "**/*";
     private static final String[] DEFAULT_INCLUDES = new String[]{FILE_FILTER};
     private static final String DEFAULT_CHARSET = "UTF-8";
-    private static final String DEFAULT_OUTPUT_DIRECTORY = "${project.build.directory}/site";
+    private static final String DEFAULT_OUTPUT_DIRECTORY = "${project.build.directory}/docs";
+    private static final String DEFAULT_TARGET_FILE_NAME = "${project.build.finalName}-docs";
+    private static final String TARGET_FILE_EXTENSION = "zip";
+//    private static final String DEFAULT_TARGET_FILE_NAME = "${project.artifactId}-${project.version}-docs.zip";
     /**
      * The input directory from where the input files will be looked for generation.
      * By default it points to {@code ${basedir}/src/main/md}
@@ -74,11 +83,47 @@ public class MarkdownMojo extends AbstractMojo {
     @Parameter
     private String[] options;
 
+    /**
+     * You can provide an optional css that will be applied to the generated documentation.
+     */
     @Parameter(property = "md.css")
     private File css;
 
+    /**
+     * The Markdown file extension without the dote '.'. By default is set to {@code 'md'}
+     */
     @Parameter(property = "md.file.extension", defaultValue = DEFAULT_FILE_EXTENSION)
     private String fileExtension;
+
+    /**
+     * The target archive file path.
+     */
+    @Parameter(property = "md.target.name", defaultValue = DEFAULT_TARGET_FILE_NAME)
+    private String targetName;
+
+    /**
+     * Project build directory.
+     */
+    @Parameter(defaultValue = "${project.build.directory}", readonly = true)
+    private File projectBuildDirectory;
+
+    /**
+     * Artifact final name.
+     */
+    @Parameter(defaultValue = "${project.build.finalName}", readonly = true)
+    private String finalName;
+
+    /**
+     * add the artifact final name as root directory into the archive before
+     * the {@link #outputDir} name its default value is {@code "docs"}.
+     */
+    @Parameter(property = "md.add.final.name", defaultValue = "false")
+    private boolean addFinalName;
+
+    @Component
+    private MavenProject project;
+    @Component
+    private MavenProjectHelper projectHelper;
 
     @Override
     public void execute() throws MojoExecutionException, MojoFailureException {
@@ -119,6 +164,23 @@ public class MarkdownMojo extends AbstractMojo {
                 throw new MojoExecutionException("IO exception when generated from: " + includedFile, e);
             }
         }
+        packageDoc();
+    }
+
+    private int getLogLevel() {
+        if (getLog().isDebugEnabled()) {
+            return Logger.LEVEL_DEBUG;
+        }
+        if (getLog().isInfoEnabled()) {
+            return Logger.LEVEL_INFO;
+        }
+        if (getLog().isWarnEnabled()) {
+            return Logger.LEVEL_WARN;
+        }
+        if (getLog().isErrorEnabled()) {
+            return Logger.LEVEL_ERROR;
+        }
+        return Logger.LEVEL_DISABLED;
     }
 
     private String getCssRelativePath(Path targetCss, File destinationFile) {
@@ -211,5 +273,118 @@ public class MarkdownMojo extends AbstractMojo {
             }
         }
         return result;
+    }
+
+
+    private void packageDoc() throws MojoExecutionException {
+        //prepare docs structure
+        AbstractBuildDir buildDirectory = createBuildDir();
+
+        File buildDocsDirectory = buildDirectory.docsDir();
+        Path buildDocsDirPath = buildDocsDirectory.toPath();
+        Path outputDirPath = outputDir.toPath();
+
+        try {
+            java.nio.file.Files.move(outputDirPath, buildDocsDirPath);
+        } catch (IOException e) {
+            throw new MojoExecutionException("Cannot move the docs dir into the build directory.", e);
+        }
+
+        //create the zip archive
+        ZipArchiver archive = new ZipArchiver();
+        ConsoleLogger plexusLogger = new ConsoleLogger(getLogLevel(), "md-maven-plugin:archive");
+        archive.enableLogging(plexusLogger);
+        archive.addDirectory(buildDirectory.dir());
+        archive.setDestFile(getTargetFile());
+        try {
+            archive.createArchive();
+        } catch (IOException e) {
+            throw new MojoExecutionException("Cannot produce the documentation archive.", e);
+        }
+        projectHelper.attachArtifact(this.project,
+                TARGET_FILE_EXTENSION,
+                "docs",
+                getTargetFile());
+        // clean up
+        try {
+            java.nio.file.Files.move(buildDocsDirPath, outputDirPath);
+        } catch (IOException e) {
+            throw new MojoExecutionException("Cannot move the docs dir into the build directory.", e);
+        }
+
+        buildDirectory.clean();
+    }
+
+    private File getBuildDirectory() {
+        return new File(projectBuildDirectory, "md-build");
+    }
+
+    private File getTargetFile() {
+        return new File(projectBuildDirectory, targetName + '.' + TARGET_FILE_EXTENSION);
+    }
+
+
+    private AbstractBuildDir createBuildDir() {
+        AbstractBuildDir buildDir;
+        if (addFinalName) {
+            buildDir = new FinalNameBuildDir();
+        } else {
+            buildDir = new DefaultBuildDir();
+        }
+        buildDir.init();
+        return buildDir;
+    }
+
+    private abstract class AbstractBuildDir {
+        File buildDirectory = getBuildDirectory();
+
+        abstract void init();
+
+        File dir() {
+            return buildDirectory;
+        }
+
+        abstract void clean();
+
+        File docsDir() {
+            File parent = dir();
+            return getDocsDir(parent);
+        }
+
+        File getDocsDir(File parent) {
+            return new File(parent, outputDir.getName());
+        }
+    }
+
+
+    private class DefaultBuildDir extends AbstractBuildDir {
+
+        void init() {
+            buildDirectory.mkdir();
+        }
+
+        void clean() {
+            if (buildDirectory.exists()) buildDirectory.delete();
+        }
+    }
+
+
+    private class FinalNameBuildDir extends AbstractBuildDir {
+        File finalNameBuildDirectory = new File(buildDirectory, finalName);
+
+        void init() {
+            buildDirectory.mkdir();
+            finalNameBuildDirectory.mkdir();
+        }
+
+        @Override
+        File docsDir() {
+            return getDocsDir(finalNameBuildDirectory);
+        }
+
+        void clean() {
+            if (finalNameBuildDirectory.exists()) finalNameBuildDirectory.delete();
+            if (buildDirectory.exists()) buildDirectory.delete();
+        }
     }
 }

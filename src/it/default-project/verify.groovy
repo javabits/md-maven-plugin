@@ -3,9 +3,11 @@ private void checkFile(String path) {
     assert tableOfContent.isFile()
 }
 
-checkFile("target/site/index.html");
-checkFile("target/site/base.css");
-checkFile("target/site/table-content.html");
-checkFile("target/site/icon.gif");
-checkFile("target/site/user-guide/user-guide.html");
-checkFile("target/site/user-guide/image.png");
+checkFile("target/docs/index.html");
+checkFile("target/docs/base.css");
+checkFile("target/docs/table-content.html");
+checkFile("target/docs/icon.gif");
+checkFile("target/docs/user-guide/user-guide.html");
+checkFile("target/docs/user-guide/image.png");
+checkFile("target/default-test-1.0-SNAPSHOT-docs.zip");
+checkFile("../../local-repo/org/javabits/maven/md/default-test/1.0-SNAPSHOT/default-test-1.0-SNAPSHOT-docs.zip");

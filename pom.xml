@@ -24,6 +24,8 @@
         <guava.version>14.0.1</guava.version>
         <plexus-utils.version>3.0.10</plexus-utils.version>
         <junit.version>4.11</junit.version>
+        <plexus-archiver.version>2.1.1</plexus-archiver.version>
+        <maven-project.version>2.2.1</maven-project.version>
     </properties>
     <packaging>maven-plugin</packaging>
     <name>Markdown Maven Plugin</name>
@@ -54,6 +56,11 @@
                 <version>${maven-plugin-annotations.version}</version>
             </dependency>
             <dependency>
+                <groupId>org.apache.maven</groupId>
+                <artifactId>maven-project</artifactId>
+                <version>${maven-project.version}</version>
+            </dependency>
+            <dependency>
                 <groupId>org.pegdown</groupId>
                 <artifactId>pegdown</artifactId>
                 <version>${pegdown.version}</version>
@@ -67,6 +74,11 @@
                 <groupId>org.codehaus.plexus</groupId>
                 <artifactId>plexus-utils</artifactId>
                 <version>${plexus-utils.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.codehaus.plexus</groupId>
+                <artifactId>plexus-archiver</artifactId>
+                <version>${plexus-archiver.version}</version>
             </dependency>
             <dependency>
                 <groupId>junit</groupId>
@@ -86,6 +98,10 @@
             <artifactId>maven-plugin-annotations</artifactId>
         </dependency>
         <dependency>
+            <groupId>org.apache.maven</groupId>
+            <artifactId>maven-project</artifactId>
+        </dependency>
+        <dependency>
             <groupId>org.pegdown</groupId>
             <artifactId>pegdown</artifactId>
         </dependency>
@@ -96,6 +112,10 @@
         <dependency>
             <groupId>org.codehaus.plexus</groupId>
             <artifactId>plexus-utils</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.codehaus.plexus</groupId>
+            <artifactId>plexus-archiver</artifactId>
         </dependency>
         <dependency>
             <groupId>junit</groupId>
@@ -239,7 +259,7 @@
                     <settingsFile>src/it/settings.xml</settingsFile>
                     <goals>
                         <goal>clean</goal>
-                        <goal>test-compile</goal>
+                        <goal>install</goal>
                     </goals>
                 </configuration>
                 <executions>
