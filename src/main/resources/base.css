@@ -228,6 +228,8 @@ pre {
   border-radius: 5px;
   padding: 0.8em;
   line-height: 1.3;
+  background-color: #3F3F3F;
+  color: white;
 }
 
 pre.code, pre.programlisting {
