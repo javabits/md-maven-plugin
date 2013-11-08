@@ -130,6 +130,10 @@ public class MarkdownMojo extends AbstractMojo {
         getLog().info("Markdown");
         PegDownProcessor pegDownProcessor = new PegDownProcessor(getOptions());
         DirectoryScanner markDownScanner = new DirectoryScanner();
+        if (!sources.exists()) {
+            getLog().info("Skip project no documentation found at: " + sources);
+            return;
+        }
         getLog().debug("Scan files " + Arrays.toString(getIncludes()) + ", from: " + sources);
         markDownScanner.setIncludes(getIncludes());
         markDownScanner.setBasedir(sources);
