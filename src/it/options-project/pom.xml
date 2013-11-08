@@ -34,8 +34,9 @@
                                <option>HARDWRAPS</option>
                                <option>FENCED_CODE_BLOCKS</option>
                            </options>
-                           <css>${basedir}/src/main/md/toto.css</css>
+                           <css>${basedir}/src/main/docs/toto.css</css>
                            <addFinalName>true</addFinalName>
+                           <sources>${basedir}/src/main/docs</sources>
                        </configuration>
                     </execution>
                 </executions>

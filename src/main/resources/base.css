@@ -255,7 +255,3 @@ li em, p em {
 code em, tt em {
   text-decoration: none;
 }
-
-code {
-  white-space: nowrap;
-}
