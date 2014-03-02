@@ -26,6 +26,7 @@
         <junit.version>4.11</junit.version>
         <plexus-archiver.version>2.1.1</plexus-archiver.version>
         <maven-project.version>2.2.1</maven-project.version>
+        <gpg.skip>true</gpg.skip>
     </properties>
     <packaging>maven-plugin</packaging>
     <name>Markdown Maven Plugin</name>
@@ -42,6 +43,24 @@
             <distribution>repo</distribution>
         </license>
     </licenses>
+
+    <issueManagement>
+        <system>GitHub Issues</system>
+        <url>http://github.com/javabits/yar/issues</url>
+    </issueManagement>
+
+    <developers>
+        <developer>
+            <id>rgilles</id>
+            <name>Romain Gilles</name>
+            <email>romain.gilles AT gmail.com</email>
+            <roles>
+                <role>owner</role>
+                <role>developer</role>
+            </roles>
+            <timezone>+1</timezone>
+        </developer>
+    </developers>
 
     <dependencyManagement>
         <dependencies>
@@ -218,8 +237,21 @@
                     <mavenExecutorId>forked-path</mavenExecutorId>
                     <preparationGoals>clean install</preparationGoals>
                     <useReleaseProfile>false</useReleaseProfile>
-                    <arguments>-Psonatype-oss</arguments>
+                    <arguments>-Psonatype-oss,attachment -Dgpg.skip=false</arguments>
                 </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-gpg-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>sign-artifacts</id>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>sign</goal>
+                        </goals>
+                    </execution>
+                </executions>
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -308,32 +340,6 @@
                     <url>https://oss.sonatype.org/service/local/staging/deploy/maven2/</url>
                 </repository>
             </distributionManagement>
-        </profile>
-        <profile>
-            <id>release</id>
-            <activation>
-                <property>
-                    <name>performRelease</name>
-                    <value>true</value>
-                </property>
-            </activation>
-            <build>
-                <plugins>
-                    <plugin>
-                        <groupId>org.apache.maven.plugins</groupId>
-                        <artifactId>maven-gpg-plugin</artifactId>
-                        <executions>
-                            <execution>
-                                <id>sign-artifacts</id>
-                                <phase>verify</phase>
-                                <goals>
-                                    <goal>sign</goal>
-                                </goals>
-                            </execution>
-                        </executions>
-                    </plugin>
-                </plugins>
-            </build>
         </profile>
         <profile>
             <id>attachment</id>
