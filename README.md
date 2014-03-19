@@ -50,4 +50,7 @@ where:
  * XX: is the release issue associated to the milestone
  * X: is the milestone number
 
+Resources
+---------
+ * https://github.com/sirthias/pegdown
 
